@@ -1,0 +1,409 @@
+<?php
+
+function productos_theme() {
+  $theme_hooks = array();
+
+  $theme_hooks['products_tpl_view'] = array(
+    'variables' => array('element' => NULL, 'view_mode' => NULL),
+    'template' => 'products_template'
+  );
+
+  return $theme_hooks;
+}
+/**
+ * Implements hook_entity_info().
+ */
+function productos_entity_info() {
+  
+  $info = array();
+  
+  $info['product'] = array(
+    'label' => t('Productos'),
+    'base table' => 'productos',
+    'entity keys' => array(
+      'id' => 'id',
+      'label' => 'nombre',
+    ),
+    'entity class' => 'ProductEntity',
+    'controller class' => 'ProductEntityController',
+    'access callback' => 'productos_access_callback',
+    'uri callback' => 'entity_class_uri',
+    'admin ui' => array(
+      'path' => 'admin/productos',
+      'controller class' => 'EntityDefaultUIController',
+    ),
+    'fieldable' => TRUE,
+    /*'bundles' => array(
+      'product' => array(
+        'label' => t('Project'),
+        'admin' => array(
+          'path' => 'admin/projects',
+        ),
+      ),
+    ),*/
+    'views controller class' => 'EntityDefaultViewsController',
+    'module' => 'productos',
+  );
+  
+  return $info;
+}
+
+/**
+ * Implements hook_menu()
+ */
+function productos_menu() {
+  $items = array();
+  
+  $items['productos'] = array(
+    'title' => 'Listado de productos',
+    'page callback' => 'productos_page',
+    'access arguments' => array('access content'),
+  );
+  
+  $items['producto/%'] = array(
+    'title callback'   => 'product_page_title',
+    'title arguments'  => array(1),
+    'page callback'    => 'product_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+  );
+  
+  return $items;
+}
+
+/**
+ * Access callback for product entities.
+ */
+function productos_access_callback($op, $product = NULL, $account = NULL) {
+  if ($op == 'view' || $op == 'update' || $op == 'create' || $op == 'delete') {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Callback function for our product entities test path
+ */
+function productos_page() {
+  
+  
+  $projects = entity_load('product');
+  $list = entity_view('product', $projects);
+  
+  $output = array();
+  foreach ($list['product'] as $product) {
+    $output[] = drupal_render($product);
+  }
+  
+  return implode($output);
+
+}
+
+/**
+ * Callback function for displaying the individual product page
+ */
+function productos_view($id) {
+  
+  $projects = entity_load('product', array($id));
+  $product = $projects[$id];
+  
+  drupal_set_title($product->nombre);
+  $output = entity_view('product', array($product));
+  
+  return $output;
+  
+}
+
+/**
+ * Form definition for adding / editing a product.
+ */
+function product_form($form, &$form_state, $product = NULL)
+{
+  
+    $form['nombre'] = array(
+    '#title' => t('Nombre'),
+    '#type' => 'textfield',
+    '#required' => true,
+    '#description' => t('Nombre del producto'),
+    '#default_value' => isset($product->nombre) ? $product->nombre : '',
+  );
+
+  $form['sku'] = array(
+    '#title' => t('SKU'),
+    '#type' => 'textfield',
+    '#required' => true,
+    '#description' => t('Nombre alfanúmerico del producto, único.'),
+    '#default_value' => isset($product->sku) ? $product->sku : '',
+  );
+  
+  $form['categoria_id'] = array(
+    '#title' => t('Categoria'),
+    '#type' => 'select',
+    '#required' => true,
+    '#description' => t('Lista de categorías'),
+    '#options' => taxonomy_list('categorias'),
+    '#default_value' => isset($product->categoria_id) ? $product->categoria_id : null,
+    '#ajax' => array(
+      'event'=>'change',
+      'callback' =>'sandbox_ajax_category',
+      'wrapper' => 'sub',
+    ),
+  );
+
+  $form['sub_categoria_id'] = array(
+    '#title' => t('Sub Categoria'),
+    '#type' => 'select',
+    '#required' => TRUE,
+    '#options' => array(''=>'Sub Categoria'),
+    '#prefix' => '<div id="sub">',
+    '#suffix' => '</div>',
+    '#default_value' => isset($product->sub_categoria_id) ? $product->sub_categoria_id : null,
+    '#validated' => true,
+  );
+  
+  $form['programa_id'] = array (
+      '#title' => t('Programa'),
+      '#type' => 'select',
+      '#required' => true,
+      '#description' => t('lista de programas'),
+      '#options' => entity_list('programp'),
+      '#default_value' => isset($product->programa_id) ? $product->programa_id : null,
+  );
+  $form['tipo_flete_id'] = array(
+    '#title' => t('Tipo de fletes'),
+    '#type' => 'select',
+    '#required' => true,
+    '#description' => t('Tipos de fletes'),
+    '#options' => entity_list_flete('flete_info'),
+    '#default_value' => isset($product->tipo_flete_id) ? $product->tipo_flete_id : null,
+  );
+
+  $form['costo'] = array(
+    '#title' => t('Costo'),
+    '#type' => 'textfield',
+    '#required' => true,
+    '#description' => t('Costo'),
+    '#default_value' => isset($product->costo) ? $product->costo : '',
+  );
+  
+  $form['precio_sale'] = array(
+    '#title' => t("Precio de venta"),
+    '#type' => 'textfield',
+    '#required' => true,
+    '#default_value' => isset($product->precio_sale) ? $product->precio_sale : '',
+    '#description' => t('Precio de venta'),
+  );
+  
+  $form['submit'] = array(
+    '#type' => 'submit', 
+    '#value' => isset($product->id) ? t('Actualizar producto') : t('Guardar producto'),
+    '#weight' => 50,
+  );
+
+  return $form;
+}
+/*Intento para obtener el valor actual de la categoría*/
+function get_value($sub_cat,$form, $form_state){
+  $val = taxonomy_get_parents($sub_cat);
+  $opti = array();
+  $terms = taxonomy_get_tree(2,$val[1]->tid);
+
+  foreach ($terms as $key => $value) {
+
+     $opti[$value->tid] = $value->name;
+  }
+
+  return $form['sub_categoria_id']['#options'] = $opti;
+
+}
+/*
+ * Traer las subcategorías o hijos de la categoría q escoja el usuario
+ */
+function sandbox_ajax_category($form, $form_state) {
+  $catid = $form_state['values']['categoria_id'];
+
+  $options = array(''=> 'Categoria');
+  $terms = taxonomy_get_tree(2,$catid);
+
+  foreach ($terms as $key => $value) {
+    $options[$value->tid] = $value->name;
+  }
+  $form['sub_categoria_id']['#options'] = $options;
+
+  return $form['sub_categoria_id'];
+}
+
+function taxonomy_list($name)
+{
+  $taxonomy = taxonomy_vocabulary_machine_name_load($name);
+
+  $terms = taxonomy_get_tree($taxonomy->vid,0,1);
+
+  foreach ($terms as $data) {
+    $output[$data->tid] = $data->name;
+  }
+  return $output;
+}
+function entity_list_flete($flet_id)
+{
+  $result = entity_load($flet_id);
+    $output = array();
+  foreach($result as $data) {
+    $output[$data->id] = $data->codigo;
+  }
+    return $output;
+
+}
+function entity_list($prog_id)
+{
+  $result = entity_load($prog_id);
+    $output = array();
+  foreach($result as $data) {
+    $output[$data->id] = $data->nombre;
+  }
+    return $output;
+
+}
+
+function product_form_validate($form, &$form_state)
+{
+    if (!(is_numeric($form_state['values']['precio_sale']))) {       
+        form_set_error('precio_sale', t('El campo debe ser numérico'));
+    }
+    $result = new EntityFieldQuery();
+    $result->entityCondition('entity_type','product')
+     ->propertyCondition('sku', $form_state['values']['sku'])
+     ->execute();
+
+    if (isset($result->ordered_results) && !isset($form_state['product']->id)) {
+      form_set_error('sku', t('Producto repetido'));
+    }
+
+    if ($form_state['values']['precio_sale'] > 0) 
+    {
+      $ganan = (($form_state['values']['precio_sale']-$form_state['values']['costo'])/$form_state['values']['precio_sale'])*100;
+      if ($ganan <= 15) 
+      {
+        form_set_error('precio_sale', t('Ganancia debe ser mayor al 15%'));
+      }
+    }
+
+    
+}
+/**
+ * Submit handler for the product add/edit form.
+ */
+function product_form_submit($form, &$form_state) {
+  $product = entity_ui_form_submit_build_entity($form, $form_state);
+  $product->save();
+  drupal_set_message(t('El producto: @name se guardó correctamente.', array('@name' => $product->nombre)));
+  $form_state['redirect'] = 'admin/productos';
+}
+
+function product_page_view($entity)
+{
+  //se carga la información de la entidad
+  $products = entity_load('product', array($entity));
+  $prod = $products[$entity];
+
+  //se carga la información de la entidad 'programas' para poder acceder a los datos y mostrarlos
+  $programs = entity_load('programp', array( $prod->programa_id ));
+  $program = $programs[$prod->programa_id];
+  $prod->program = $program;
+
+  //acceder a la información de la taxonomia a través del EntityMetadaWrapper
+  $term_w = entity_metadata_wrapper('taxonomy_term', taxonomy_term_load($prod->categoria_id));
+  $prod->categoria = $term_w;
+
+  //información del flete
+  $fletes = entity_load('flete_info', array($prod->tipo_flete_id));
+  $flete = $fletes[$prod->tipo_flete_id];
+  $prod->flete = $flete;
+
+  //valores calculados
+  //precio total
+  $precio_Total = $prod->precio_sale + $flete->costo_envio;
+  $prod->total = $precio_Total;
+
+  //precio en puntos
+  $precio_puntos = ceil($prod->total / $program->valor_punto);
+  $prod->puntos = $precio_puntos;
+
+
+  return array(
+      '#theme'     => 'products_tpl_view',
+      '#element'   => $prod,
+      '#view_mode' => 'full',
+  );
+  
+}
+/**
+ * Implements hook_entity_property_info().
+ */
+function productos_entity_property_info() {
+  
+  $info = array();
+  
+  $info['product']['properties']['id'] = array(
+    'label' => t('Project ID'),
+    'description' => t('The ID of the product.'),
+    'type' => 'integer',
+    'schema field' => 'id',
+  );
+
+  $info['product']['properties']['nombre'] = array(
+    'label' => t('Project name'),
+    'description' => t('Name of the product.'),
+    'type' => 'text',
+    'schema field' => 'nombre',
+  );
+  
+  return $info;
+}
+
+
+/**
+ * Extending the EntityAPIController for the Project entity.
+ */
+class ProductEntityController extends EntityAPIController {
+  
+  public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
+
+    $build = parent::buildContent($entity, $view_mode, $langcode, $content);
+    
+    // Our additions to the $build render array.
+    $build['description'] = array(
+      '#type' => 'markup',
+      '#markup' => 'Sku:'.$entity->sku,
+      '#prefix' => '<div class="product-sku">',
+      '#suffix' => '</div>',
+    );
+    
+    return $build;
+  
+  }
+  
+}
+  
+/**
+ * Project entity class extending the Entity class
+ */
+class ProductEntity extends Entity {
+  public $id;
+  public $name;
+  public $sku;
+  public $category_id;
+  public $program_id;
+  public $freight_id;
+  public $cost;
+  public $price;
+  /**
+   * Change the default URI from default/id to product/id
+   */
+  protected function defaultUri() {
+    return array('path' => 'producto/' . $this->identifier());
+  }
+  
+}

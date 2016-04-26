@@ -1,0 +1,93 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function productos_schema() {
+  
+  $schema = array();
+   
+  $schema['productos'] = array(
+    'description' => 'The base table for the Project entity',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary key of productos, consecutive',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nombre' => array(
+        'description' => 'Nombre del producto',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'sku' => array(
+        'description' => 'Nombre alfanúmerico del producto, único.',
+        'type' => 'varchar',
+        'length' => 10,
+        'not null' => TRUE,
+      ),
+      'categoria_id' => array(
+        'description' => 'Categoría del producto',
+        'type' => 'int',
+        'length' => 11,
+        'not null' => FALSE,
+      ),
+      'sub_categoria_id' => array(
+        'description' => 'Sub Categoría del producto',
+        'type' => 'int',
+        'length' => 11,
+        'not null' => FALSE,
+      ),
+      'programa_id' => array(
+        'description' => 'Categoría del producto',
+        'type' => 'int',
+        'length' => 11,
+        'not null' => FALSE,
+      ),
+      'costo' => array(
+        'description' => 'Costo del producto',
+        'type' => 'float',
+        'length' => 11,
+        'not null' => FALSE,
+      ),
+      'precio_sale' => array(
+        'description' => 'Precio de venta del producto',
+        'type' => 'float',
+        'length' => 11,
+        'not null' => FALSE,
+      ),
+      'tipo_flete_id' => array(
+        'description' => 'Tipo de flete del producto',
+        'type' => 'int',
+        'length' => 11,
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('id'),
+    'unique keys' => array('sku' => array('sku')),
+  );
+  
+  return $schema;
+}
+
+ /**
+     * Implements hook_enable().
+     */
+
+function productos_enable() {
+  $vocabulary = taxonomy_vocabulary_load(variable_get('Categorias', 0));
+  if (!$vocabulary) {
+    $category = array(
+      'name' => t('Categorías'),
+      'machine_name' => 'categorias',
+      'description' => t('Categorías del producto'),
+      'hierarchy' => 1,
+      'module' => 'productos',
+    );
+    $vocabulary = (object) $category;
+    taxonomy_vocabulary_save($vocabulary);
+    variable_set('categorias', $vocabulary->vid);
+  }
+}

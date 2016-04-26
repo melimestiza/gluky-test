@@ -1,0 +1,125 @@
+<?php
+
+/**
+ * Implements hook_entity_info().
+ */
+function fletes_entity_info() {
+  
+  $info = array();
+  
+  $info['flete_info'] = array(
+    'label' => t('Fletes'),
+    'base table' => 'fletes',
+    'entity keys' => array(
+      'id' => 'id',
+      'label' => 'codigo',
+    ),
+    'entity class' => 'FletEntity',
+    'controller class' => 'FletEntityController',
+    'access callback' => 'fletes_access_callback',
+    'uri callback' => 'entity_class_uri',
+    'admin ui' => array(
+      'path' => 'admin/productos/fletes',
+      'controller class' => 'EntityDefaultUIController',
+    ),
+    'views controller class' => 'EntityDefaultViewsController',
+    'module' => 'fletes',
+  );
+  
+  return $info;
+}
+
+/**
+ * Access callback for programp entities.
+ */
+function fletes_access_callback($op, $flete_info = NULL, $account = NULL) {
+  if ($op == 'view' || $op == 'update' || $op == 'create' || $op == 'delete') {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Form definition for adding / editing a programp.
+ */
+function flete_info_form($form, &$form_state, $flete_info = NULL) {
+  
+  $form['codigo'] = array(
+    '#title' => t('Código del tipo'),
+    '#type' => 'textfield',
+    '#default_value' => isset($flete_info->codigo) ? $flete_info->codigo : '',
+    '#required' => TRUE,
+  );
+
+  $form['costo_envio'] = array(
+    '#title' => t('Valor del punto'),
+    '#type' => 'textfield',
+    '#default_value' => isset($flete_info->costo_envio) ? $flete_info->costo_envio : '',
+    '#required' => TRUE,
+  );
+
+  
+  $form['submit'] = array(
+    '#type' => 'submit', 
+    '#value' => isset($flete_info->id) ? t('Actualizar') : t('Guardar'),
+    '#weight' => 50,
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for the programp add/edit form.
+ */
+function flete_info_form_submit($form, &$form_state) {
+  $flete_info = entity_ui_form_submit_build_entity($form, $form_state);
+  $flete_info->save();
+  drupal_set_message(t('El tipo de flete: @name ha sido guardado', array('@name' => $flete_info->codigo)));
+  $form_state['redirect'] = 'admin/productos/fletes';
+}
+
+function flete_info_form_validate($form, &$form_state)
+{
+    if (!(is_numeric($form_state['values']['costo_envio']))) {       
+        form_set_error('costo_envio', t('El campo debe ser numérico y debe ser decimal'));
+    }    
+}
+
+/**
+ * Extending the EntityAPIController for the Project entity.
+ */
+class FletEntityController extends EntityAPIController {
+  
+  public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
+
+    $build = parent::buildContent($entity, $view_mode, $langcode, $content);
+    
+    // Our additions to the $build render array.
+    $build['valor'] = array(
+      '#type' => 'markup',
+      '#markup' => $entity->codigo,
+      '#prefix' => '<strong>Valor punto: ',
+      '#suffix' => '</strong>',
+    );
+    
+    return $build;
+  
+  }
+  
+}
+  
+/**
+ * Project entity class extending the Entity class
+ */
+class FletEntity extends Entity {
+  
+  /**
+   * Change the default URI from default/id to programp/id
+   */
+  protected function defaultUri() {
+    return array('path' => 'admin/productos/fletes');
+  }
+  
+}

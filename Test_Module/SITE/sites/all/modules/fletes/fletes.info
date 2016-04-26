@@ -1,0 +1,5 @@
+name = Tipo de flete
+description = Tipo de fletes
+core = 7.x
+package = Productos
+dependencies[] = entity

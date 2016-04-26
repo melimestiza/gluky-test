@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function programa_prod_schema() {
+  
+  $schema = array();
+   
+  $schema['programa'] = array(
+    'description' => 'Tabla de los programas',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary key of programas, consecutive',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nombre' => array(
+        'description' => 'Nombre del programa',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'valor_punto' => array(
+        'description' => 'Valor del punto',
+        'type' => 'float',
+        'length' => 10,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  
+  return $schema;
+}

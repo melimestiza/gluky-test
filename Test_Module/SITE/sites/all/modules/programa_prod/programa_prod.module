@@ -1,0 +1,205 @@
+<?php
+
+/**
+ * Implements hook_entity_info().
+ */
+function programa_prod_entity_info() {
+  
+  $info = array();
+  
+  $info['programp'] = array(
+    'label' => t('Programa'),
+    'base table' => 'programa',
+    'entity keys' => array(
+      'id' => 'id',
+      'label' => 'nombre',
+    ),
+    'entity class' => 'ProgramEntity',
+    'controller class' => 'ProgramEntityController',
+    'access callback' => 'programa_prod_access_callback',
+    'uri callback' => 'entity_class_uri',
+    'admin ui' => array(
+      'path' => 'admin/productos/programa',
+      'controller class' => 'EntityDefaultUIController',
+    ),
+    'views controller class' => 'EntityDefaultViewsController',
+    'module' => 'programa_prod',
+  );
+  
+  return $info;
+}
+
+/**
+ * Implements hook_menu()
+ */
+function programa_prod_menu() {
+  $items = array();
+  
+  $items['programa'] = array(
+    'title' => 'Nuestros programas',
+    'page callback' => 'programa_prod_projects',
+    'access arguments' => array('access content'),
+  );
+  $items['programa/%'] = array(
+    'title' => 'Project',
+    'page callback' => 'programa_prod_view',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+  );
+  
+  return $items;
+}
+
+/**
+ * Access callback for programp entities.
+ */
+function programa_prod_access_callback($op, $programp = NULL, $account = NULL) {
+  if ($op == 'view' || $op == 'update' || $op == 'create' || $op == 'delete') {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Callback function for our programp entities test path
+ */
+function programa_prod_projects() {
+
+  $projects = entity_load('programp');
+  $list = entity_view('programp', $projects);
+  
+  $output = array();
+  foreach ($list['programp'] as $product) {
+    $output[] = drupal_render($product);
+  }
+  
+  return implode($output);
+
+}
+function programa_prod_view($id) {
+  
+  $projects = entity_load('programp', array($id));
+  $product = $projects[$id];
+  
+  drupal_set_title($product->nombre);
+  $output = entity_view('programp', array($product));
+  
+  return $output;
+  
+}
+
+/**
+ * Form definition for adding / editing a programp.
+ */
+function programp_form($form, &$form_state, $programp = NULL) {
+  
+  $form['nombre'] = array(
+    '#title' => t('Nombre programa'),
+    '#type' => 'textfield',
+    '#default_value' => isset($programp->nombre) ? $programp->nombre : '',
+    '#required' => TRUE,
+  );
+
+  $form['valor_punto'] = array(
+    '#title' => t('Valor del punto'),
+    '#type' => 'textfield',
+    '#default_value' => isset($programp->valor_punto) ? $programp->valor_punto : '',
+    '#required' => TRUE,
+  );
+
+  
+  $form['submit'] = array(
+    '#type' => 'submit', 
+    '#value' => isset($programp->id) ? t('Actualizar') : t('Guardar'),
+    '#weight' => 50,
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for the programp add/edit form.
+ */
+function programp_form_submit($form, &$form_state) {
+  $programp = entity_ui_form_submit_build_entity($form, $form_state);
+  $programp->save();
+  drupal_set_message(t('El programa: @name ha sido guardado.', array('@name' => $programp->nombre)));
+  $form_state['redirect'] = 'admin/productos/programa';
+}
+
+function programp_form_validate($form, &$form_state)
+{
+    if (!(is_numeric($form_state['values']['valor_punto']))) {       
+        form_set_error('valor_punto', t('El campo debe ser numérico y debe ser decimal'));
+    }    
+}
+
+/**
+ * Implements hook_entity_property_info().
+ */
+function programa_prod_entity_property_info() {
+  
+  $info = array();
+  
+  $info['programp']['properties']['id'] = array(
+    'label' => t('Programa ID'),
+    'description' => t('The ID of the programp.'),
+    'type' => 'integer',
+    'schema field' => 'id',
+  );
+
+  $info['programp']['properties']['nombre'] = array(
+    'label' => t('Nombre programa'),
+    'description' => t('Nombre del progrma'),
+    'type' => 'text',
+    'schema field' => 'nombre',
+  );
+  $info['programp']['properties']['valor_punto'] = array(
+    'label' => t('Valor punto'),
+    'description' => t('Valor punto'),
+    'type' => 'text',
+    'schema field' => 'valor_punto',
+  );
+  
+  return $info;
+}
+
+
+/**
+ * Extending the EntityAPIController for the Project entity.
+ */
+class ProgramEntityController extends EntityAPIController {
+  
+  public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
+
+    $build = parent::buildContent($entity, $view_mode, $langcode, $content);
+    
+    // Our additions to the $build render array.
+    $build['valor'] = array(
+      '#type' => 'markup',
+      '#markup' => $entity->valor_punto,
+      '#prefix' => '<strong>Valor punto: ',
+      '#suffix' => '</strong>',
+    );
+    
+    return $build;
+  
+  }
+  
+}
+  
+/**
+ * Project entity class extending the Entity class
+ */
+class ProgramEntity extends Entity {
+  
+  /**
+   * Change the default URI from default/id to programp/id
+   */
+  protected function defaultUri() {
+    return array('path' => 'admin/productos/programa/' . $this->identifier());
+  }
+  
+}

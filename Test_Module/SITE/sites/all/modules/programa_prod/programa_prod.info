@@ -1,0 +1,5 @@
+name = Programa
+description = Listado de programas
+core = 7.x
+package = Productos
+dependencies[] = entity

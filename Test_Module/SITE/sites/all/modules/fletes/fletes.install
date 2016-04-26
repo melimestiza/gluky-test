@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function fletes_schema() {
+  
+  $schema = array();
+   
+  $schema['fletes'] = array(
+    'description' => 'Tabla de fletes',
+    'fields' => array(
+      'id' => array(
+        'description' => 'PK fletes',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'codigo' => array(
+        'description' => 'Código alfanumérico del flete',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'costo_envio' => array(
+        'description' => 'Costo del envio',
+        'type' => 'float',
+        'length' => 10,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  
+  return $schema;
+}
